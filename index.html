@@ -15,82 +15,66 @@
     body {
       font-family: 'Segoe UI', sans-serif;
       background: #0073aa;
-      height: 100vh;
+      min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 20px;
+      padding: 30px 20px;
+      text-align: center;
     }
     .logo {
       width: 100px;
       height: 100px;
-      border-radius: 20px;
+      border-radius: 22px;
       margin-bottom: 20px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
     }
     .titolo {
       color: white;
-      font-size: 24px;
+      font-size: 26px;
       font-weight: bold;
       margin-bottom: 8px;
     }
     .sottotitolo {
-      color: rgba(255,255,255,0.8);
-      font-size: 14px;
-      margin-bottom: 40px;
-      text-align: center;
+      color: rgba(255,255,255,0.85);
+      font-size: 15px;
+      margin-bottom: 36px;
+      line-height: 1.5;
     }
-    .spinner {
-      width: 36px; height: 36px;
-      border: 3px solid rgba(255,255,255,0.3);
-      border-top-color: white;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* Pulsante installa */
-    #btnInstalla {
-      display: none;
-      background: white;
-      color: #0073aa;
-      border: none;
-      padding: 14px 28px;
+    .btn {
+      display: block;
+      width: 100%;
+      max-width: 280px;
+      padding: 15px 24px;
       border-radius: 30px;
       font-size: 16px;
       font-weight: bold;
       cursor: pointer;
-      margin-bottom: 16px;
+      border: none;
+      margin-bottom: 12px;
+      text-decoration: none;
+    }
+    .btn-bianco {
+      background: white;
+      color: #0073aa;
       box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     }
-    #btnInstalla:active {
-      transform: scale(0.97);
+    .btn-outline {
+      background: transparent;
+      color: white;
+      border: 2px solid rgba(255,255,255,0.7);
     }
-
-    /* Istruzioni iOS */
-    #iosGuida {
+    .guida-ios {
       display: none;
       background: rgba(255,255,255,0.15);
-      border-radius: 12px;
-      padding: 16px;
+      border-radius: 14px;
+      padding: 18px;
       color: white;
-      font-size: 14px;
-      text-align: center;
-      margin-bottom: 16px;
-      line-height: 1.8;
-    }
-
-    /* Pulsante vai all'app */
-    #btnApri {
-      display: none;
-      background: rgba(255,255,255,0.2);
-      color: white;
-      border: 2px solid rgba(255,255,255,0.6);
-      padding: 12px 24px;
-      border-radius: 30px;
       font-size: 15px;
-      cursor: pointer;
-      margin-top: 12px;
+      line-height: 2;
+      margin-bottom: 20px;
+      max-width: 300px;
     }
   </style>
 </head>
@@ -98,103 +82,104 @@
 
   <img class="logo" src="icons/icon-192.png" alt="Logo">
   <div class="titolo">Trasferte</div>
-  <div class="sottotitolo" id="sottotitolo">Caricamento in corso...</div>
+  <div class="sottotitolo" id="sottotitolo">Benvenuto</div>
 
-  <!-- Android: pulsante installa -->
-  <button id="btnInstalla" onclick="installaPWA()">
-    📲 Installa App
-  </button>
-
-  <!-- iOS: istruzioni manuali -->
-  <div id="iosGuida">
-    Per installare l'app:<br>
-    1. Tocca <strong>⬆️ Condividi</strong> in basso<br>
-    2. Scorri e tocca <strong>"Aggiungi a schermata Home"</strong><br>
+  <!-- iOS: istruzioni -->
+  <div class="guida-ios" id="iosGuida">
+    Per installare:<br>
+    1. Tocca <strong>⬆️ Condividi</strong><br>
+    2. Tocca <strong>"Aggiungi a schermata Home"</strong><br>
     3. Tocca <strong>Aggiungi</strong>
   </div>
 
-  <!-- Fallback: vai direttamente all'app -->
-  <button id="btnApri" onclick="apriApp()">
+  <!-- Pulsanti -->
+  <button class="btn btn-bianco" id="btnInstalla" style="display:none"
+          onclick="installaPWA()">
+    📲 Installa App
+  </button>
+
+  <button class="btn btn-outline" id="btnApri"
+          onclick="apriApp()">
     Apri l'App →
   </button>
 
-  <div class="spinner" id="spinner"></div>
-
   <script>
+    // ⚠️ SOSTITUISCI CON IL TUO URL REALE
     const APP_URL = "https://script.google.com/macros/s/AKfycbzeoshQcqnVvMplVX7HU8dMQRtFPcyibguUm_RxjqSj/exec?page=trasferta";
 
     let deferredPrompt = null;
 
     // Registra Service Worker
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js')
-        .then(() => console.log("SW registrato"))
-        .catch(e => console.log("SW errore:", e));
+      navigator.serviceWorker.register('sw.js').catch(e => console.log(e));
     }
 
-    // Controlla se è già installata
+    // Rileva piattaforma
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent.toLowerCase());
+    const isAndroid = /android/i.test(navigator.userAgent.toLowerCase());
     const isInstalled = window.matchMedia('(display-mode: standalone)').matches
                      || window.navigator.standalone === true;
 
-    // Rileva iOS
-    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-
-    // Intercetta evento installazione Android
+    // Intercetta prompt installazione Android
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       deferredPrompt = e;
-      mostraUIAndroid();
+      document.getElementById("btnInstalla").style.display = "block";
+      document.getElementById("sottotitolo").textContent = "Installa l'app sul tuo telefono";
     });
 
-    // Dopo installazione riuscita
+    // Dopo installazione
     window.addEventListener('appinstalled', () => {
       document.getElementById("btnInstalla").style.display = "none";
-      document.getElementById("sottotitolo").textContent = "✅ App installata!";
-      setTimeout(() => apriApp(), 1500);
+      document.getElementById("sottotitolo").textContent = "✅ App installata! Aprila dalla schermata Home.";
     });
 
-    // Init
-    window.onload = function() {
-      document.getElementById("spinner").style.display = "none";
+    // Init quando la pagina è pronta
+    document.addEventListener('DOMContentLoaded', function() {
 
       if (isInstalled) {
-        // Già installata — vai direttamente all'app
-        document.getElementById("sottotitolo").textContent = "Avvio in corso...";
-        document.getElementById("spinner").style.display = "block";
-        setTimeout(() => apriApp(), 800);
+        // App già installata → redirect diretto
+        document.getElementById("sottotitolo").textContent = "Avvio...";
+        apriApp();
 
       } else if (isIOS) {
-        // iPhone/iPad — mostra istruzioni manuali
-        mostraUIiOS();
+        // iPhone → mostra guida
+        document.getElementById("iosGuida").style.display = "block";
+        document.getElementById("sottotitolo").textContent = "Segui le istruzioni per installare";
 
-      } else {
-        // Android — aspetta l'evento beforeinstallprompt
-        document.getElementById("sottotitolo").textContent = "Tocca il pulsante per installare l'app";
-        // Se dopo 3 secondi non arriva l'evento, mostra il pulsante "Apri"
+      } else if (isAndroid) {
+        // Android → aspetta beforeinstallprompt, fallback dopo 3s
+        document.getElementById("sottotitolo").textContent = "Caricamento...";
         setTimeout(() => {
           if (!deferredPrompt) {
-            mostraFallback();
+            document.getElementById("sottotitolo").textContent = "Tocca per aprire l'app";
           }
         }, 3000);
+
+      } else {
+        // Desktop o altro
+        document.getElementById("sottotitolo").textContent = "Tocca per aprire l'app";
       }
-    };
-
-    function mostraUIAndroid() {
-      document.getElementById("btnInstalla").style.display = "block";
-      document.getElementById("btnApri").style.display = "block";
-      document.getElementById("sottotitolo").textContent = "Installa l'app sul tuo telefono";
-    }
-
-    function mostraUIiOS() {
-      document.getElementById("iosGuida").style.display = "block";
-      document.getElementById("btnApri").style.display = "block";
-      document.getElementById("sottotitolo").textContent = "Segui le istruzioni per installare";
-    }
-
-    function mostraFallback() {
-      document.getElementById("btnApri").style.display = "block";
-      document.getElementById("sottotitolo").textContent = "Tocca per aprire l'app";
-    }
+    });
 
     function installaPWA() {
-      i
+      if (!deferredPrompt) {
+        apriApp();
+        return;
+      }
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then(choice => {
+        deferredPrompt = null;
+        if (choice.outcome === "dismissed") {
+          apriApp(); // se rifiuta, apre comunque l'app
+        }
+      });
+    }
+
+    function apriApp() {
+      window.location.href = APP_URL;
+    }
+  </script>
+
+</body>
+</html>
